@@ -25,7 +25,7 @@ app.get("/api/users", (req, res) => {
 });
 
 app.post("/api/users", (req, res) => {
-  //TODO: create new user
+  //create new user
   const body = req.body;
   users.push({ ...body, id: users.length + 1 });
   fs.writeFile("./MOCK_DATA.json", JSON.stringify(users), (err, data) => {
@@ -44,12 +44,31 @@ app
     return res.json(user);
   })
   .patch((req, res) => {
-    //TODO: create update user
-    return res.json({ status: "pending" });
+    //update user
+    const id = Number(req.params.id);
+    const updateUser = req.body;
+    const index = users.findIndex((user) => user.id === id);
+    if (index !== -1) {
+      users[index] = { ...users[index], ...updateUser };
+      fs.writeFile("./MOCK_DATA.json", JSON.stringify(users), (err, data) => {
+        return res.json({ status: "User updated Successfully" });
+      });
+    } else {
+      return res.status(404).json({ error: "User not found" });
+    }
   })
   .delete((req, res) => {
-    //TODO: create delete user
-    return res.json({ status: "pending" });
+    //delete user
+    const id = Number(req.params.id);
+    const index = users.findIndex((user) => user.id === id);
+    if (index !== -1) {
+      users.splice(index, 1);
+      fs.writeFile("./MOCK_DATA.json", JSON.stringify(users), (err, data) => {
+        return res.json({ status: "User deleted Successfully" });
+      });
+    } else {
+      return res.status(404).json({ error: "User not found" });
+    }
   });
 
 app.listen(8000, () => {
