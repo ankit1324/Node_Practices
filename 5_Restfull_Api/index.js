@@ -1,7 +1,42 @@
 const express = require("express");
-const users = require("./MOCK_DATA.json");
+const mongoose = require("mongoose");
 const fs = require("fs");
 const app = express();
+
+//Connection
+mongoose
+  .connect("mongodb://0.0.0.0:27017/youtube-app")
+  .then(() => console.log("MongoDB connected"))
+  .catch((err) => {
+    console.log("Mongo error", err);
+  });
+
+//Schema
+const userSchema = new mongoose.Schema(
+  {
+    firstName: {
+      type: String,
+      required: true,
+    },
+    lastName: {
+      type: String,
+    },
+    email: {
+      type: String,
+      unique: true,
+    },
+    jobTitle: {
+      type: String,
+    },
+    gender: {
+      type: String,
+    },
+  },
+  { timestamps: true }
+);
+
+//Model
+const User = mongoose.model("user", userSchema);
 
 //middleware
 app.use(express.urlencoded({ extended: false }));
@@ -11,64 +46,61 @@ app.get("/", (req, res) => {
   res.send("<h1>HonePage</h1>");
 });
 
-app.get("/users", (req, res) => {
+app.get("/users", async (req, res) => {
+  const allDbUser = await User.find({});
   const html = `
   <ul>
-    ${users.map((user) => `<li> ${user.first_name}</li>`).join("")}
-  </ul>
-  `;
+  ${allDbUser
+    .map((user) => `<li> ${user.firstName} - ${user.email}</li>`)
+    .join("")}
+    </ul>
+    `;
   res.send(html);
 });
 
-app.get("/api/users", (req, res) => {
-  return res.json(users);
+app.get("/api/users", async (req, res) => {
+  const allDbUser = await User.find({});
+  return res.json(allDbUser);
 });
 
-app.post("/api/users", (req, res) => {
+app.post("/api/users", async (req, res) => {
   //create new user
   const body = req.body;
-  users.push({ ...body, id: users.length + 1 });
-  fs.writeFile("./MOCK_DATA.json", JSON.stringify(users), (err, data) => {
-    return res.json({
-      status: "User created Succesfully",
-      id: users.length,
-    });
+  if (
+    !body ||
+    !body.first_name ||
+    !body.last_name ||
+    !body.email ||
+    !body.gender ||
+    !body.job_title
+  ) {
+    return res.status(400).json({ msg: "All fields are required" });
+  }
+
+  const result = await User.create({
+    firstName: body.first_name,
+    lastName: body.last_name,
+    email: body.email,
+    gender: body.gender,
+    jobTitle: body.job_title,
   });
+  return res.status(201).json({ msg: "Success" });
 });
 
 app
   .route("/api/users/:id")
-  .get((req, res) => {
-    const id = Number(req.params.id);
-    const user = users.find((user) => user.id === id);
+  .get(async (req, res) => {
+    const user = await User.findById(req.params.id);
     return res.json(user);
   })
-  .patch((req, res) => {
+  .patch(async (req, res) => {
     //update user
-    const id = Number(req.params.id);
-    const updateUser = req.body;
-    const index = users.findIndex((user) => user.id === id);
-    if (index !== -1) {
-      users[index] = { ...users[index], ...updateUser };
-      fs.writeFile("./MOCK_DATA.json", JSON.stringify(users), (err, data) => {
-        return res.json({ status: "User updated Successfully" });
-      });
-    } else {
-      return res.status(404).json({ error: "User not found" });
-    }
+    await User.findByIdAndUpdate(req.params.id, { lastName: "changed" });
+    return res.json({ status: "Success" });
   })
-  .delete((req, res) => {
-    //delete user
-    const id = Number(req.params.id);
-    const index = users.findIndex((user) => user.id === id);
-    if (index !== -1) {
-      users.splice(index, 1);
-      fs.writeFile("./MOCK_DATA.json", JSON.stringify(users), (err, data) => {
-        return res.json({ status: "User deleted Successfully" });
-      });
-    } else {
-      return res.status(404).json({ error: "User not found" });
-    }
+  .delete(async (req, res) => {
+    await User.findByIdAndDelete(req.params.id);
+    return res.status(202).json({ msg: "Deleted" });
   });
 
 app.listen(8000, () => {
