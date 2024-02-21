@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const path = require("path");
 const app = express();
@@ -7,14 +9,12 @@ const mongoose = require("mongoose");
 const cookieParser = require("cookie-parser");
 const checkForAuthCookie = require("./middleware/auth");
 const Blog = require("./models/blog");
-const { find } = require("./models/user");
 
-const port = 3000;
+const PORT = process.env.PORT;
 
 //connectMongodb
-mongoose
-  .connect("mongodb://0.0.0.0:27017/Blogify")
-  .then((e) => console.log("MongoDB connected"));
+const url = process.env.MONGODB_URL;
+mongoose.connect(url).then((e) => console.log("MongoDB connected"));
 
 app.set("view engine", "ejs");
 app.set("views", path.resolve("./views"));
@@ -36,4 +36,4 @@ app.get("/", async (req, res) => {
 app.use("/user", userRouter);
 app.use("/blog", blogRouter);
 
-app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+app.listen(PORT, () => console.log(`Example app listening on port ${PORT}!`));
